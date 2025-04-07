@@ -1,2 +1,2 @@
 # configIT
- A minimalist yet highly capable configuration provider
+ (WIP) A minimalist yet highly capable configuration provider
