@@ -12,6 +12,7 @@ type User struct {
 	Sub        string `gorm:"uniqueIndex"` // OIDC sub or username
 	Password   string // password when not using OIDC
 	Department Department
+	Permission string `gorm:"type:enum('admin', 'user')"` // admin or user
 }
 
 func InsertUser(user *User) error {
@@ -32,4 +33,12 @@ func DeleteUser(id uint) error {
 		return fmt.Errorf("cannot delete user: user still owns %d app(s)", count)
 	}
 	return db.Delete(&User{}, id).Error
+}
+
+func GetUserBySub(sub string) (*User, error) {
+	var user User
+	if err := db.Where("sub = ?", sub).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

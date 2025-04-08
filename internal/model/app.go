@@ -21,15 +21,16 @@ const (
 type App struct {
 	gorm.Model
 
-	Name            string
-	Namespace       Namespace
-	Owner           User
-	EditPermission  string `gorm:"type:enum('anyone', 'owner', 'department')"`
-	Department      Department
-	Scope           []AccessScope
-	AutoRefresh     string `gorm:"type:enum('configmap', 'hook', 'passive')"`
-	InCluster       bool   `gorm:"default:false"`
-	LastRefreshTime time.Time
+	Name             string
+	Namespace        Namespace
+	Owner            User
+	EditPermission   string `gorm:"type:enum('anyone', 'owner', 'department')"`
+	Department       Department
+	Scope            []AccessScope
+	AutoRefresh      string `gorm:"type:enum('configmap', 'hook', 'passive')"`
+	AutoRefreshParam string // configmap name or hook url
+	InCluster        bool   `gorm:"default:false"`
+	LastRefreshTime  time.Time
 }
 
 func InsertApp(app App) error {

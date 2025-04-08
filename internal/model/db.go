@@ -35,7 +35,7 @@ func ConnectDB(dsn string, debug bool) (err error) {
 		return errors.Wrap(err, "fail to connect db")
 	}
 
-	err = db.AutoMigrate(&App{}, &User{}, &Department{}, &Config{})
+	err = db.AutoMigrate(&App{}, &User{}, &Department{}, &Config{}, &AccessScope{}, &Settings{}, &Namespace{})
 	if err != nil {
 		return errors.Wrap(err, "fail to auto migrate")
 	}
