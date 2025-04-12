@@ -1,23 +1,26 @@
 package model
 
 import (
+	"context"
+
+	"github.com/BingyanStudio/configIT/internal/utils"
 	"gorm.io/gorm"
 )
 
 type Namespace struct {
 	gorm.Model
 
-	Name      string
-	InCluster bool `gorm:"default:false"`
+	Name        string
+	InClusterDB bool `gorm:"default:false"`
 }
 
-func InsertNamespace(namespace Namespace) error {
-	return db.Create(&namespace).Error
+func InsertNamespace(ctx context.Context, namespace Namespace) error {
+	return db.WithContext(ctx).Create(&namespace).Error
 }
 
-func ImportNamespaceFromK8s(namespaces []string) error {
+func ImportNamespaceFromK8s(ctx context.Context, namespaces []string) error {
 	var existingNamespaces []Namespace
-	if err := db.Where("in_cluster = ?", true).Find(&existingNamespaces).Error; err != nil {
+	if err := db.WithContext(ctx).Where("in_cluster = ?", true).Find(&existingNamespaces).Error; err != nil {
 		return err
 	}
 
@@ -28,7 +31,7 @@ func ImportNamespaceFromK8s(namespaces []string) error {
 
 	for _, existingNs := range existingNamespaces {
 		if !nsMap[existingNs.Name] {
-			if err := db.Model(&existingNs).Update("in_cluster", false).Error; err != nil {
+			if err := db.WithContext(ctx).Model(&existingNs).Update("in_cluster", false).Error; err != nil {
 				return err
 			}
 		} else {
@@ -37,8 +40,8 @@ func ImportNamespaceFromK8s(namespaces []string) error {
 	}
 
 	for ns := range nsMap {
-		newNamespace := Namespace{Name: ns, InCluster: true}
-		if err := db.Create(&newNamespace).Error; err != nil {
+		newNamespace := Namespace{Name: ns, InClusterDB: true}
+		if err := db.WithContext(ctx).Create(&newNamespace).Error; err != nil {
 			return err
 		}
 	}
@@ -46,6 +49,22 @@ func ImportNamespaceFromK8s(namespaces []string) error {
 	return nil
 }
 
-func DeleteNamespace(namespace Namespace) error {
-	return db.Delete(&namespace).Error
+func DeleteNamespace(ctx context.Context, namespace Namespace) error {
+	return db.WithContext(ctx).Delete(&namespace).Error
+}
+
+func UpdateNamespace(ctx context.Context, namespace Namespace) error {
+	return db.WithContext(ctx).Save(&namespace).Error
+}
+
+func (ns *Namespace) InCluster(ctx context.Context) (bool, error) {
+	nss, err := utils.GetNamespaces(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !utils.Contains(nss, ns.Name) {
+		ns.InClusterDB = false
+		return false, db.WithContext(ctx).Save(ns).Error
+	}
+	return true, nil
 }

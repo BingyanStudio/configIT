@@ -31,8 +31,8 @@ func InitK8sClient() error {
 	return nil
 }
 
-func GetNamespaceIPs(namespace string) ([]string, error) {
-	pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+func GetNamespaceIPs(ctx context.Context, namespace string) ([]string, error) {
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
@@ -46,32 +46,36 @@ func GetNamespaceIPs(namespace string) ([]string, error) {
 	return podIPs, nil
 }
 
-func GetPodIP(namespace, podName string, fuzzmatch bool) (string, error) {
-	if fuzzmatch {
-		pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+func GetPodIPs(ctx context.Context, namespace, podName string, fuzzy bool) ([]string, error) {
+	var ips []string
+	if fuzzy {
+		pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return "", fmt.Errorf("failed to list pods: %w", err)
+			return nil, fmt.Errorf("failed to list pods: %w", err)
 		}
 		for _, pod := range pods.Items {
 			if strings.Contains(pod.Name, podName) {
-				return pod.Status.PodIP, nil
+				ips = append(ips, pod.Status.PodIP)
 			}
 		}
-		return "", fmt.Errorf("pod with name %s not found in namespace %s", podName, namespace)
 	} else {
-		pod, err := k8sClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		pod, err := k8sClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return "", fmt.Errorf("pod %s not found in namespace %s", podName, namespace)
+				return nil, fmt.Errorf("pod %s not found in namespace %s", podName, namespace)
 			}
-			return "", fmt.Errorf("failed to get pod: %w", err)
+			return nil, fmt.Errorf("failed to get pod: %w", err)
 		}
-		return pod.Status.PodIP, nil
+		ips = append(ips, pod.Status.PodIP)
 	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no IPs found for pod %s in namespace %s", podName, namespace)
+	}
+	return ips, nil
 }
 
-func GetNamespaces() ([]string, error) {
-	namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+func GetNamespaces(ctx context.Context) ([]string, error) {
+	namespaces, err := k8sClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list namespaces: %w", err)
 	}
@@ -83,8 +87,8 @@ func GetNamespaces() ([]string, error) {
 	return nsList, nil
 }
 
-func GetPods(namespace string) ([]string, error) {
-	pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+func GetPods(ctx context.Context, namespace string) ([]string, error) {
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
@@ -96,7 +100,7 @@ func GetPods(namespace string) ([]string, error) {
 	return podList, nil
 }
 
-func CreateConfigMap(namespace, name string, data map[string]string) error {
+func CreateConfigMap(ctx context.Context, namespace, name string, data map[string]string) error {
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -104,15 +108,15 @@ func CreateConfigMap(namespace, name string, data map[string]string) error {
 		},
 		Data: data,
 	}
-	_, err := k8sClient.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+	_, err := k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create configmap: %w", err)
 	}
 	return nil
 }
 
-func UpdateConfigMap(namespace, name string, data map[string]string) error {
-	configMap, err := k8sClient.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func UpdateConfigMap(ctx context.Context, namespace, name string, data map[string]string) error {
+	configMap, err := k8sClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return fmt.Errorf("configmap %s not found in namespace %s", name, namespace)
@@ -121,9 +125,20 @@ func UpdateConfigMap(namespace, name string, data map[string]string) error {
 	}
 
 	configMap.Data = data
-	_, err = k8sClient.CoreV1().ConfigMaps(namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	_, err = k8sClient.CoreV1().ConfigMaps(namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update configmap: %w", err)
 	}
 	return nil
+}
+
+func GetConfigMap(ctx context.Context, namespace, name string) (map[string]string, error) {
+	configMap, err := k8sClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, fmt.Errorf("configmap %s not found in namespace %s", name, namespace)
+		}
+		return nil, fmt.Errorf("failed to get configmap: %w", err)
+	}
+	return configMap.Data, nil
 }

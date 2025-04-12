@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -15,29 +16,29 @@ type User struct {
 	Permission string `gorm:"type:enum('admin', 'user')"` // admin or user
 }
 
-func InsertUser(user *User) error {
-	return db.Create(user).Error
+func InsertUser(ctx context.Context, user *User) error {
+	return db.WithContext(ctx).Create(user).Error
 }
 
-func UpdateUser(user *User) error {
-	return db.Save(user).Error
+func UpdateUser(ctx context.Context, user *User) error {
+	return db.WithContext(ctx).Save(user).Error
 }
 
-func DeleteUser(id uint) error {
+func DeleteUser(ctx context.Context, id uint) error {
 	// Check if user owns any apps
 	var count int64
-	if err := db.Model(&App{}).Where("owner = ?", id).Count(&count).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&App{}).Where("owner = ?", id).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
 		return fmt.Errorf("cannot delete user: user still owns %d app(s)", count)
 	}
-	return db.Delete(&User{}, id).Error
+	return db.WithContext(ctx).Delete(&User{}, id).Error
 }
 
-func GetUserBySub(sub string) (*User, error) {
+func GetUserBySub(ctx context.Context, sub string) (*User, error) {
 	var user User
-	if err := db.Where("sub = ?", sub).First(&user).Error; err != nil {
+	if err := db.WithContext(ctx).Where("sub = ?", sub).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

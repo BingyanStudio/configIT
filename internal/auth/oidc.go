@@ -65,11 +65,11 @@ func handleOAuth2Callback(code string) (string, string, error) {
 		return "", "", fmt.Errorf("Failed to parse ID token claims: %v", err)
 	}
 
-	subKey, err := model.GetSettings("OidcClaimSub")
+	subKey, err := model.GetSettings(context.TODO(), "OidcClaimSub")
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get OIDC claim sub key: %v", err)
 	}
-	deptKey, err := model.GetSettings("OidcClaimDepartment")
+	deptKey, err := model.GetSettings(context.TODO(), "OidcClaimDepartment")
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to get OIDC claim department key: %v", err)
 	}

@@ -1,7 +1,7 @@
 package model
 
 import (
-	"time"
+	"context"
 
 	"gorm.io/gorm"
 )
@@ -26,25 +26,31 @@ type App struct {
 	Owner            User
 	EditPermission   string `gorm:"type:enum('anyone', 'owner', 'department')"`
 	Department       Department
-	Scope            []AccessScope
+	Scopes           []AccessScope
 	AutoRefresh      string `gorm:"type:enum('configmap', 'hook', 'passive')"`
 	AutoRefreshParam string // configmap name or hook url
-	InCluster        bool   `gorm:"default:false"`
-	LastRefreshTime  time.Time
 }
 
-func InsertApp(app App) error {
-	return db.Create(&app).Error
+func InsertApp(ctx context.Context, app App) error {
+	return db.WithContext(ctx).Create(&app).Error
 }
 
-func DeleteApp(app App) error {
+func DeleteApp(ctx context.Context, app App) error {
 	// First delete the access scopes associated with the app
-	if err := db.Model(&app).Association("Scope").Delete(app.Scope); err != nil {
+	if err := db.WithContext(ctx).Model(&app).Association("Scopes").Delete(app.Scopes); err != nil {
 		return err
 	}
-	return db.Delete(&app).Error
+	return db.WithContext(ctx).Delete(&app).Error
 }
 
-func UpdateApp(app App) error {
-	return db.Save(&app).Error
+func UpdateApp(ctx context.Context, app App) error {
+	return db.WithContext(ctx).Save(&app).Error
+}
+
+func GetAppByName(ctx context.Context, name string) (*App, error) {
+	var app App
+	if err := db.WithContext(ctx).Where("name = ?", name).First(&app).Error; err != nil {
+		return nil, err
+	}
+	return &app, nil
 }

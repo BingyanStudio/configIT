@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 )
@@ -10,8 +11,8 @@ type Settings struct {
 	Value string
 }
 
-func InitSettings() error {
-	if err := db.AutoMigrate(&Settings{}); err != nil {
+func InitSettings(ctx context.Context) error {
+	if err := db.WithContext(ctx).AutoMigrate(&Settings{}); err != nil {
 		return err
 	}
 
@@ -38,25 +39,25 @@ func InitSettings() error {
 		return err
 	}
 
-	if err := db.Create(&init_settings).Error; err != nil {
+	if err := db.WithContext(ctx).Create(&init_settings).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetSettings(key string) (string, error) {
+func GetSettings(ctx context.Context, key string) (string, error) {
 	var setting Settings
-	if err := db.Where("key = ?", key).First(&setting).Error; err != nil {
+	if err := db.WithContext(ctx).Where("key = ?", key).First(&setting).Error; err != nil {
 		return "", err
 	}
 	return setting.Value, nil
 }
 
-func SetSettings(key string, value string) error {
+func SetSettings(ctx context.Context, key string, value string) error {
 	var setting Settings
-	if err := db.Where("key = ?", key).First(&setting).Error; err != nil {
+	if err := db.WithContext(ctx).Where("key = ?", key).First(&setting).Error; err != nil {
 		return err
 	}
 	setting.Value = value
-	return db.Save(&setting).Error
+	return db.WithContext(ctx).Save(&setting).Error
 }

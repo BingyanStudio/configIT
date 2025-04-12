@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/BingyanStudio/configIT/internal/model"
@@ -22,7 +23,7 @@ func validate(hash, pwd string) bool {
 }
 
 func Login(username, password string) (*model.User, error) {
-	user, err := model.GetUserBySub(username)
+	user, err := model.GetUserBySub(context.TODO(), username)
 	if err != nil {
 		return nil, err
 	}
