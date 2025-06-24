@@ -49,6 +49,22 @@ func ImportNamespaceFromK8s(ctx context.Context, namespaces []string) error {
 	return nil
 }
 
+func GetNamespace(ctx context.Context, id uint) (Namespace, error) {
+	var namespace Namespace
+	if err := db.WithContext(ctx).First(&namespace, id).Error; err != nil {
+		return Namespace{}, err
+	}
+	return namespace, nil
+}
+
+func GetNamespaces(ctx context.Context) ([]Namespace, error) {
+	var namespaces []Namespace
+	if err := db.WithContext(ctx).Find(&namespaces).Error; err != nil {
+		return nil, err
+	}
+	return namespaces, nil
+}
+
 func DeleteNamespace(ctx context.Context, namespace Namespace) error {
 	return db.WithContext(ctx).Delete(&namespace).Error
 }
